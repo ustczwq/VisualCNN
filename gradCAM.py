@@ -83,14 +83,21 @@ def imgTrans(imgPath):
         transforms.CenterCrop(224)])
     img = Image.open(imgPath).convert('RGB')
     img = transform(img)
-    img = np.asarray(img)
+    # img = np.asarray(img)
     return img
 
 def plotCAM(imgPath, cam):
+    img = imgTrans(imgPath).convert('RGBA')
+
+    cmap = plt.get_cmap('jet')
+    cam = np.uint8(255 * cmap(cam))
+    cam = Image.fromarray(cam).convert('RGBA')
+    
+    camOnImg = Image.blend(img, cam, 0.6)
+
     fig, axs = plt.subplots(1, 2)
-    axs[0].imshow(imgTrans(imgPath))
-    axs[1].pcolormesh(cam, cmap=plt.cm.jet)   
-    axs[1].invert_yaxis()   
+    axs[0].imshow(img)  
+    axs[1].imshow(camOnImg)
 
     for ax in axs.flat:
         ax.set_xticks([])
@@ -111,7 +118,7 @@ if __name__ == "__main__":
            ['spider.png' , 72],   # 3  spider
            ['dd_tree.jpg', 31]]   # 4  tree
 
-    index = 4
+    index = 0
     imgPath = 'inputs/' + img[index][0]
     classNum = img[index][1]
     layerName = 'layer3'         
