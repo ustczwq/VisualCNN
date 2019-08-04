@@ -27,7 +27,9 @@ class GradCAM():
         img = self.imgLoad(imgPath)
         img = img.to(self.device)
         self.hookLayer(layerName)
+
         maps, outputs = self.getMapsOutputs(img, self.model, layerName)
+        maps = maps.data.cpu().numpy()[0]
 
         oneHot = torch.zeros((1, outputs.size()[-1]), device=self.device)
         oneHot[0][classNum] = 1
@@ -36,14 +38,13 @@ class GradCAM():
         outputs.backward(gradient=oneHot, retain_graph=True)
         grad = self.grad.data.cpu().numpy()[0]
 
-        weights = grad.mean(axis=(1, 2), keepdims=True)
+        # weights = grad.mean(axis=(1, 2), keepdims=True)    # gradients avgpooling, original
+        weights = grad                                       # gradients on every pixel, better look
         weights = np.maximum(weights, 0)
 
-        maps = maps.data.cpu().numpy()[0]
         cam = weights * maps
-        cam = cam.mean(axis=0)
         cam = np.maximum(cam, 0)
-
+        cam = cam.mean(axis=0)
         cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))
         cam = np.uint8(cam * 255)
 
@@ -77,6 +78,7 @@ class GradCAM():
         ten = transform(img)
         return ten.unsqueeze(0)
 
+
 def imgTrans(imgPath):
     transform = transforms.Compose([
         transforms.Resize(256),
@@ -93,7 +95,7 @@ def plotCAM(imgPath, cam):
     cam = np.uint8(255 * cmap(cam))
     cam = Image.fromarray(cam).convert('RGBA')
     
-    camOnImg = Image.blend(img, cam, 0.6)
+    camOnImg = Image.blend(img, cam, 1)
 
     fig, axs = plt.subplots(1, 2)
     axs[0].imshow(img)  
@@ -113,19 +115,22 @@ def plotCAM(imgPath, cam):
 if __name__ == "__main__":
 
     img = [['snake.jpg'  , 56],   # 0  snake 
-           ['cat_dog.png', 243],  # 1  dog
+           ['cat_dog.png', 243],  # 1  bull mastiff dog
            ['cat_dog.png', 281],  # 2  tabby cat 
            ['spider.png' , 72],   # 3  spider
-           ['dd_tree.jpg', 31]]   # 4  tree
-
-    index = 0
-    imgPath = 'inputs/' + img[index][0]
-    classNum = img[index][1]
-    layerName = 'layer3'         
+           ['dd_tree.jpg', 31],   # 4  tree
+           ['239_281.png', 239],  # 5  Bernese mountain dog
+           ['239_281.png', 281],  # 6  tabby cat
+           ['color.jpg'  , 239]]  # 7  test color
 
     model = models.resnet50(pretrained=True) 
-
+    
     gradCAM = GradCAM(model)
+
+    index = 2
+    imgPath = 'inputs/' + img[index][0]
+    classNum = img[index][1]
+    layerName = 'layer2'   # conv1, bn1, relu, maxpool, layer1-4
 
     cam = gradCAM.getCAM(imgPath, layerName, classNum)
     cam = cv2.resize(cam, (224, 224), interpolation=cv2.INTER_CUBIC)
