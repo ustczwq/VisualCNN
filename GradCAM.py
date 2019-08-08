@@ -95,7 +95,7 @@ def plotCAM(imgPath, cam):
     cam = np.uint8(255 * cmap(cam))
     cam = Image.fromarray(cam).convert('RGBA')
     
-    camOnImg = Image.blend(img, cam, 1)
+    camOnImg = Image.blend(img, cam, 0.6)
 
     fig, axs = plt.subplots(1, 2)
     axs[0].imshow(img)  
@@ -121,16 +121,16 @@ if __name__ == "__main__":
            ['dd_tree.jpg', 31],   # 4  tree
            ['239_281.png', 239],  # 5  Bernese mountain dog
            ['239_281.png', 281],  # 6  tabby cat
-           ['color.jpg'  , 239]]  # 7  test color
+           ['color.jpg'  , 340]]  # 7  test color
 
     model = models.resnet50(pretrained=True) 
     
     gradCAM = GradCAM(model)
 
-    index = 2
+    index = 7
     imgPath = 'inputs/' + img[index][0]
     classNum = img[index][1]
-    layerName = 'layer2'   # conv1, bn1, relu, maxpool, layer1-4
+    layerName = 'layer1'   # conv1, bn1, relu, maxpool, layer1-4
 
     cam = gradCAM.getCAM(imgPath, layerName, classNum)
     cam = cv2.resize(cam, (224, 224), interpolation=cv2.INTER_CUBIC)

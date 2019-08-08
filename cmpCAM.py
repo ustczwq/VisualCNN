@@ -61,7 +61,7 @@ class IndexTracker(object):
         self.slices = len(self.imgs)
         
         self.gradCAM = GradCAM(models.resnet50(pretrained=True))
-        self.layerName = 'layer2'
+        self.layerName = 'layer1'
 
         self.update()
 
@@ -74,21 +74,12 @@ class IndexTracker(object):
         self.update()
 
     def update(self):
-        path, pred, label = self.imgs[self.idx]
+        testPath, cleanPath, pred, label = self.imgs[self.idx]
 
-        img = imgTrans(path)
-        self.im = self.axs[0].imshow(img)
+        self.plotAxs(0, testPath, pred, label)
+        self.plotAxs(1, cleanPath, pred, label)
 
-        cam = self.gradCAM.getCAM(path, self.layerName, pred)
-        camOnImg = getCamOnImg(img, cam)     
-        self.axs[1].imshow(camOnImg)
-
-        cam = self.gradCAM.getCAM(path, self.layerName, label)
-        camOnImg = getCamOnImg(img, cam)     
-        self.axs[2].imshow(camOnImg)
-
-        self.axs[1].set_title(self.titles[self.idx])
-
+        self.axs[0][1].set_title(self.titles[self.idx])
         for ax in self.axs.flat:
             ax.set_xticks([])
             ax.set_yticks([])
@@ -96,34 +87,57 @@ class IndexTracker(object):
 
         self.im.axes.figure.canvas.draw()
 
+    def plotAxs(self, axNum, imgPath, pred, label):
+        img = imgTrans(imgPath)
+        predCAM  = self.gradCAM.getCAM(imgPath, self.layerName, pred)
+        labelCAM = self.gradCAM.getCAM(imgPath, self.layerName, label)
 
-dataRoot = '../_datasets/weather/fog/1/'
-testPath = 'test.csv'
-predPath = 'pred.csv'
+        self.im = self.axs[axNum][0].imshow(img)
+        self.axs[axNum][1].imshow(getCamOnImg(img, predCAM))
+        self.axs[axNum][2].imshow(getCamOnImg(img, labelCAM))
 
-preds = pd.read_csv(predPath, usecols=[0]).values.T[0]
-names = pd.read_csv(testPath, usecols=[0]).values.T[0]
-labels = pd.read_csv(testPath, usecols=[1]).values.T[0]
+
+testDir = '../_datasets/weather/fog/1/'
+testRes = 'test.csv'
+predRes = 'fog1Pred.csv'
+
+cleanDir = '/media/zwq/Data/ILSVRC2012_img_val/'
+cleanPredRes = 'cleanPred.csv'
+cleanDataCsv = 'clean.csv'
+
+labels = pd.read_csv(predRes, usecols=[1]).values.T[0]
+preds  = pd.read_csv(predRes, usecols=[0]).values.T[0]
+cleanPreds = pd.read_csv(cleanPredRes, usecols=[0]).values.T[0]
+cleanNames = pd.read_csv(cleanDataCsv, usecols=[0]).values.T[0]
+testNames = pd.read_csv(testRes, usecols=[0]).values.T[0]
+
 clsloc = pd.read_csv('clsloc.csv').values.T[0]
 
-wrongImgs = []
-wrongMsgs = []
+imgs = []
+msgs = []
 for i, label in enumerate(labels):
-    if preds[i] != label:
-        img = dataRoot + names[i]
-        wrongImgs.append([img, preds[i], label])
+    if cleanPreds[i] == label and preds[i] != label:
+        testImg = testDir + testNames[i]
+        cleanImg = cleanDir + cleanNames[i]
+        imgs.append([testImg, cleanImg, preds[i], label])
         msg = "Pred: " + clsloc[preds[i]] + " $\leftarrow$ " + clsloc[label]
-        wrongMsgs.append(msg)
+        msgs.append(msg)
 
-err = len(wrongImgs)
-acc = 1 - err/len(preds)
-print('Total errors:', err, '  Accuracy: {:.3f} %'.format(100 * acc))
+acc = np.sum(preds == labels) / len(labels)
+print('Test  Accuracy: {:.3f} %'.format(100 * acc))
+
+acc = np.sum(cleanPreds == labels) / len(labels)
+print('Clean Accuracy: {:.3f} %'.format(100 * acc))
+
+err = len(imgs) / np.sum(cleanPreds == labels)
+print('Corruption Err: {:.3f} %'.format(100 * err))
 
 
-fig, axs = plt.subplots(1, 3)
-tracker = IndexTracker(axs, wrongImgs, wrongMsgs)
+fig, axs = plt.subplots(2, 3)
+tracker = IndexTracker(axs, imgs, msgs)
 
 fig.canvas.mpl_connect('scroll_event', tracker.onscroll)
 fig.tight_layout()
 fig.subplots_adjust(wspace =0, hspace=0)
+
 plt.show()

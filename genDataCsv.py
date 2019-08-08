@@ -8,20 +8,21 @@ def writeCsv(data, path):
 
 dataRoot = '../_datasets/weather/brightness/1'
 
-test = [['name', 'label']]
+# test = [['name', 'label']]
 
-dirs = os.listdir(dataRoot)
-dirs.sort()
-for label, synset in enumerate(dirs):
-    imgs = os.listdir(os.path.join(dataRoot, synset))
-    for img in imgs:
-        name = os.path.join(synset, img)
-        test.append([name, label])
+# dirs = os.listdir(dataRoot)
+# dirs.sort()
+# for label, synset in enumerate(dirs):
+#     imgs = os.listdir(os.path.join(dataRoot, synset))
+#     for img in imgs:
+#         name = os.path.join(synset, img)
+#         # name = img
+#         test.append([name, label])
 
-writeCsv(test, 'test.csv')
+# writeCsv(test, 'test.csv')
 
 
-clsloc = [['name', label]]
+clsloc = [['name', 'label']]
 with open('map_clsloc.txt') as f:
     lines = f.readlines()
 lines.sort()
