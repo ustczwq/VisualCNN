@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 import cv2
 import numpy as np
 from PIL import Image
-from skimage import io
+# from skimage import io
 import matplotlib.pyplot as plt
 
 
@@ -29,25 +29,26 @@ class GradCAM():
         self.hookLayer(layerName)
 
         maps, outputs = self.getMapsOutputs(img, self.model, layerName)
-        maps = maps.data.cpu().numpy()[0]
+        # maps = maps.data.cpu().numpy()[0]
 
         oneHot = torch.zeros((1, outputs.size()[-1]), device=self.device)
         oneHot[0][classNum] = 1
 
         self.model.zero_grad()
         outputs.backward(gradient=oneHot, retain_graph=True)
-        grad = self.grad.data.cpu().numpy()[0]
+        # grad = self.grad.data.cpu().numpy()[0]
 
         # weights = grad.mean(axis=(1, 2), keepdims=True)    # gradients avgpooling, original
-        weights = grad                                       # gradients on every pixel, better look
-        weights = np.maximum(weights, 0)
+        # weights = grad                                       # gradients on every pixel, better look
+        # weights = np.maximum(weights, 0)
 
-        cam = weights * maps
+        cam = self.grad * maps
+        cam = cam.data.cpu().numpy()[0]
         cam = np.maximum(cam, 0)
         cam = cam.mean(axis=0)
         cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))
-        cam = np.uint8(cam * 255)
-
+        # cam = np.uint8(cam * 255)
+ 
         return cam
 
     @staticmethod
@@ -127,10 +128,10 @@ if __name__ == "__main__":
     
     gradCAM = GradCAM(model)
 
-    index = 7
+    index = 1
     imgPath = 'inputs/' + img[index][0]
     classNum = img[index][1]
-    layerName = 'layer1'   # conv1, bn1, relu, maxpool, layer1-4
+    layerName = 'layer4'   # conv1, bn1, relu, maxpool, layer1-4
 
     cam = gradCAM.getCAM(imgPath, layerName, classNum)
     cam = cv2.resize(cam, (224, 224), interpolation=cv2.INTER_CUBIC)
