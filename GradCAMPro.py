@@ -195,9 +195,38 @@ def plotCAM(img_path, cams_dict, res_name='result.png'):
 
     fig.tight_layout()
     fig.subplots_adjust(wspace=0.0, hspace=0.0)
-    # fig.savefig('./results/' +  res_name)
+    fig.savefig('./results/' + res_name)
 
     plt.show()
+
+
+def plot_imgs_cams(imgs_cams, res_name='result.png'):
+    keys = list(imgs_cams.keys())
+
+    cams_num = len(imgs_cams[keys[0]][1])
+
+    fig, axs = plt.subplots(len(keys), cams_num + 1, figsize=(4, 12))
+
+    for row_idx, key in enumerate(imgs_cams):
+        img_path, cams = imgs_cams[key]
+        img = img_trans(img_path).convert('RGBA')
+        axs[row_idx][0].imshow(img)
+        for col_idx, cam in enumerate(cams):
+            cam_on_img = blend_cam(img, cam)
+            axs[row_idx][col_idx + 1].imshow(cam_on_img)
+
+    for ax in axs.flat:
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set(aspect=1, adjustable='box')
+
+    fig.tight_layout()
+    fig.subplots_adjust(wspace=0.0, hspace=0.0)
+    
+    fig.savefig('./results/' + res_name)
+
+    plt.show()
+
 
 
 def blend_cam(img_pil, cam):
@@ -221,7 +250,7 @@ if __name__ == "__main__":
             ['239_281.png', 281],  # 6  tabby cat
             ['all.jpeg', 281]]  # 7  multi dogs
 
-    img_idx = 5
+    img_idx = 1
     img_dir = 'inputs'
     img_name, class_idx = imgs[img_idx]
     img_path = os.path.join(img_dir, img_name)
@@ -245,7 +274,32 @@ if __name__ == "__main__":
     visual_dict['layers'] = layers[model_dict['type']]
     visual_dict['methods'] = methods
 
-    cams_dict = gradCAM.get_cams(img_path, class_idx, visual_dict)
+    # cams_dict = gradCAM.get_cams(img_path, class_idx, visual_dict)
 
-    res_name = "%s_%d.png" % (img_name.split('.')[0], class_idx)
-    plotCAM(img_path, cams_dict, res_name)
+    # res_name = "%s_%s_%d.png" % (img_name.split('.')[0], model_dict['type'], class_idx)
+    # plotCAM(img_path, cams_dict, res_name)
+
+    imgs = [['snake.jpg', 56],   # 0  snake
+            ['cat_dog.png', 243],  # 1  bull mastiff dog
+            ['cat_dog.png', 281],  # 2  tabby cat
+            ['spider.png', 72],   # 3  spider
+            ['dd_tree.jpg', 31],   # 4  tree
+            ['239_281.png', 239],  # 5  Bernese mountain dog
+            ['239_281.png', 281],  # 6  tabby cat
+            ['all.jpeg', 281]]  # 7  multi dogs
+
+    img_dir = 'inputs'
+    visual_dict = dict()
+    visual_dict['layers'] = ['layer4', 'layer3', 'layer2']
+    visual_dict['methods'] = ['++pro']
+
+    cams_dict = dict()
+    imgs_cams = dict()
+
+    for i, img in enumerate(imgs):
+        img_name, class_idx = img
+        img_path = os.path.join(img_dir, img_name)
+        cams_dict = gradCAM.get_cams(img_path, class_idx, visual_dict)
+        imgs_cams[str(i)] = [img_path, cams_dict['++pro']]
+
+    plot_imgs_cams(imgs_cams)
